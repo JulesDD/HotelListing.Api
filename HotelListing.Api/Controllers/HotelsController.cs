@@ -29,6 +29,7 @@ namespace HotelListing.Api.Controllers
         [HttpGet("{id}")]
         public ActionResult<Hotel> Get(int id) 
         {
+            //Search for Id in listing
             var hotel = hotels.FirstOrDefault(h => h.Id == id);
             if (hotel == null)
             {
