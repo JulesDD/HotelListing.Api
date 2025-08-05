@@ -35,3 +35,37 @@ Content-Type: application/json
 }
 
 ###
+
+GET {{HotelListing.Api_HostAddress}}/api/countries
+
+###
+
+POST {{HotelListing.Api_HostAddress}}/api/countries
+Content-Type: application/json
+
+{
+  "id":0,
+  "name": "England",
+  "shortName": "ENG"
+}
+
+###
+
+@id=5
+DELETE {{HotelListing.Api_HostAddress}}/api/countries/{{id}}
+
+###
+
+@id=3
+GET {{HotelListing.Api_HostAddress}}/api/countries/{{id}}
+
+###
+
+PUT {{HotelListing.Api_HostAddress}}/api/countries/{{id}}
+Content-Type: application/json
+
+{
+  //Country
+}
+
+###
