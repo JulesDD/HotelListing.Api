@@ -44,7 +44,6 @@ POST {{HotelListing.Api_HostAddress}}/api/countries
 Content-Type: application/json
 
 {
-  "id":0,
   "name": "England",
   "shortName": "ENG"
 }
