@@ -17,13 +17,13 @@ public class HotelListingDbContext : DbContext
         modelBuilder.Entity<Country>().HasData(
             new Country
             {
-                CountryId = 1,
+                Id = 1,
                 Name = "Cananda",
                 ShortName = "CAN"
             },
             new Country
             {
-                CountryId = 2,
+                Id = 2,
                 Name = "England",
                 ShortName = "ENG"
             }

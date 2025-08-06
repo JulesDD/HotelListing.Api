@@ -7,10 +7,10 @@ POST {{HotelListing.Api_HostAddress}}/api/hotels
 Content-Type: application/json
 
 {
-  "id": 3,
   "name": "Ocean View",
   "address": "Over there",
-  "rating": 4.8
+  "rating": 4.8,
+  "Country": "ENG"
 }
 
 ###
