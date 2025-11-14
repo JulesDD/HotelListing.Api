@@ -2,5 +2,5 @@
 
 public class UpdateHotelDto : BaseHotelDto
 {
-    public int Id { get; set; }
+    public required int Id { get; set; }
 }

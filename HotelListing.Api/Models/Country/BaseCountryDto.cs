@@ -4,7 +4,8 @@ namespace HotelListing.Api.Models.Country;
 
 public abstract class BaseCountryDto
 {
-    [Required]
-    public string Name { get; set; }
-    public string ShortName { get; set; }
+    [MaxLength(25)]
+    public required string Name { get; set; }
+    [MaxLength(3)]
+    public required string ShortName { get; set; }
 }
