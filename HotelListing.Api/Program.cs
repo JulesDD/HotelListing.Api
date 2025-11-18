@@ -2,6 +2,8 @@ using HotelListing.Api.Configurations;
 using HotelListing.Api.Contracts;
 using HotelListing.Api.Data;
 using HotelListing.Api.Repository;
+using HotelListing.Api.Services;
+using HotelListing.Api.MappingProfiles;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -9,10 +11,15 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("HotelListingDbConnectionString");
-builder.Services.AddDbContext<HotelListingDbContext>(options => { options.UseSqlServer(connectionString); });
+var connectionString = builder.Configuration.GetConnectionString("HotelListingDBConnectionString");
+builder.Services.AddDbContext<HotelListingDbContext>(options =>  options.UseSqlServer(connectionString));
+
+builder.Services.AddScoped<ICountriesServices, CountriesServices>()     builder.Services.AddScoped<IHotelsServices, HotelsServices>();
 
 builder.Services.AddIdentityCore<ApiUser>().AddRoles<IdentityRole>().AddEntityFrameworkStores<HotelListingDbContext>();
+
+builder.Services.AddAutoMapper(typeof(MappingProfileHotel).Assembly);
+builder.Services.AddAutoMapper(typeof(MappingProfileCountry).Assembly);
 
 builder.Services.AddControllers().AddJsonOptions(opt => opt.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

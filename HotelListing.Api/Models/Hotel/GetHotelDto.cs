@@ -1,9 +1,17 @@
 ﻿namespace HotelListing.Api.Models.Hotel;
 
 public record GetHotelDto(
-    int CountryId,
+    int Id,
     string Name,
     string Address,
-    int? Rating,
+    double? Rating,
+    int CountryId,
     string Country
 );
+
+public record GetHotelSlimDto(
+    int Id,
+    string Name,
+    string Address,
+    double? Rating
+    );
