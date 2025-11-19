@@ -36,19 +36,19 @@ public class CountriesServices(HotelListingDbContext context, IMapper mapper) : 
         {
             if (id != updateDto.CountryId)
             {
-                return Result.BadRequest(new ErrorResult("Error", "Invalid Country Id"));
+                return Result.BadRequest(new Error(ErrorCodes.Validation, "Id route value does not math payload Id"));
             }
 
             var country = await context.Countries.FindAsync(id);
             if (country is null)
             {
-                return Result.NotFound(new ErrorResult("Error", $"Country '{id}' was not found!"));
+                return Result.NotFound(new Error(ErrorCodes.NotFound, $"Country '{id}' was not found!"));
             }
 
             var duplicateCountry = await context.Countries.AnyAsync(c => c.CountryId != id && c.Name == updateDto.Name);
             if (duplicateCountry)
             {
-                return Result.Failure(new ErrorResult("Error", $"Country '{updateDto.Name}' already exists in database!"));
+                return Result.Failure(new Error(ErrorCodes.Failure, $"Country '{updateDto.Name}' already exists in database!"));
             }
 
             mapper.Map(updateDto, country);
@@ -58,7 +58,7 @@ public class CountriesServices(HotelListingDbContext context, IMapper mapper) : 
         }
         catch
         {
-            return Result.Failure(new ErrorResult("Error", "An error occurred while updating the country."));
+            return Result.Failure(new Error(ErrorCodes.Failure, "An error occurred while updating the country."));
         }
     }
 
@@ -69,7 +69,7 @@ public class CountriesServices(HotelListingDbContext context, IMapper mapper) : 
             var country = await context.Countries.FindAsync(id);
             if (country is null)
             {
-                return Result.NotFound(new ErrorResult("NotFound", $"Country '{id}' was not found!"));
+                return Result.NotFound(new Error(ErrorCodes.NotFound, $"Country '{id}' was not found!"));
             }
             context.Countries.Remove(country);
             await context.SaveChangesAsync();
@@ -89,7 +89,7 @@ public class CountriesServices(HotelListingDbContext context, IMapper mapper) : 
             var existingCountry = await CountryExistsAsync(createDto.Name);
             if (existingCountry)
             {
-                return Result<GetCountryDto>.Failure(new ErrorResult("Error", $"'{createDto.Name}' already exists in database!"));
+                return Result<GetCountryDto>.Failure(new Error(ErrorCodes.Failure, $"'{createDto.Name}' already exists in database!"));
             }
 
             var country = mapper.Map<Country>(createDto);

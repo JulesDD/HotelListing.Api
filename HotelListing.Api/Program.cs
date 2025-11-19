@@ -14,7 +14,8 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("HotelListingDBConnectionString");
 builder.Services.AddDbContext<HotelListingDbContext>(options =>  options.UseSqlServer(connectionString));
 
-builder.Services.AddScoped<ICountriesServices, CountriesServices>()     builder.Services.AddScoped<IHotelsServices, HotelsServices>();
+builder.Services.AddScoped<ICountriesServices, CountriesServices>();     
+builder.Services.AddScoped<IHotelsServices, HotelsService>();
 
 builder.Services.AddIdentityCore<ApiUser>().AddRoles<IdentityRole>().AddEntityFrameworkStores<HotelListingDbContext>();
 
