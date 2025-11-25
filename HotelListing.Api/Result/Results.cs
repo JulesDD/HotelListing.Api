@@ -20,6 +20,7 @@ public readonly record struct Result
     public static Result NotFound(params Error[] errors) => new(false, errors);
     public static Result BadRequest(params Error[] errors) => new(false, errors);
 
+
     public static Result Combine(params Result[] results)
         => results.Any(r => !r.IsSuccess)
            ? Failure(results.Where(r => !r.IsSuccess).SelectMany(r => r.Errors).ToArray())
@@ -39,6 +40,7 @@ public readonly record struct Result<T>
     public static Result<T> Failure(params Error[] errors) => new(false, default, errors);
     public static Result<T> NotFound() => new(false, default, []);
     public static Result<T> BadRequest() => new(false, default, []);
+    public static Result<T> BadRequest(params Error[] errors) => new(false, default, []);
 
 
     // Functional helpers
