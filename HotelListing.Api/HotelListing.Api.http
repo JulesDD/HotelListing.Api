@@ -1,4 +1,5 @@
 @HotelListing.Api_HostAddress = https://localhost:7124
+@apiKey = QWRtaW5AbG9jYWxob3N0LmNvbTpQYXNzd29yZDE=
 
 GET {{HotelListing.Api_HostAddress}}/api/hotels
 
@@ -14,7 +15,6 @@ Content-Type: application/json
 }
 
 ###
-
 @id=1
 DELETE {{HotelListing.Api_HostAddress}}/api/hotels/{{id}}
 
@@ -23,7 +23,6 @@ DELETE {{HotelListing.Api_HostAddress}}/api/hotels/{{id}}
 GET {{HotelListing.Api_HostAddress}}/api/hotels/{{id}}
 
 ###
-
 PUT {{HotelListing.Api_HostAddress}}/api/hotels/{{id}}
 Content-Type: application/json
 
@@ -35,11 +34,9 @@ Content-Type: application/json
 }
 
 ###
-
 GET {{HotelListing.Api_HostAddress}}/api/countries
 
 ###
-
 POST {{HotelListing.Api_HostAddress}}/api/countries
 Content-Type: application/json
 
@@ -54,12 +51,10 @@ Content-Type: application/json
 DELETE {{HotelListing.Api_HostAddress}}/api/countries/{{id}}
 
 ###
-
 @id=3
 GET {{HotelListing.Api_HostAddress}}/api/countries/{{id}}
 
 ###
-
 PUT {{HotelListing.Api_HostAddress}}/api/countries/{{id}}
 Content-Type: application/json
 
@@ -72,9 +67,50 @@ Content-Type: application/json
 ###
 POST {{HotelListing.Api_HostAddress}}/api/users/register
 Content-Type: application/json
+
 {
   "userName": "Admin@localhost.com",
   "email": "Password1!",
   "firstName": "First",
   "lastName": "Name"
 }
+
+###
+POST {{HotelListing.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin1@localhost.com",
+  "password": "Password1!"
+}
+
+###
+POST {{HotelListing.Api_HostAddress}}/api/defaultauth/login
+Content-Type: application/json
+
+{
+  "email": "user@localhost.com",
+  "password": "Password1!"
+}
+
+###
+POST {{HotelListing.Api_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "admin1@localhost.com",
+  "password": "Password1!",
+  "firstName":"First",
+  "lastName": "Last",
+  "role": "Administrator"
+}
+
+###
+GET {{HotelListing.Api_HostAddress}}/api/apikey
+X-Api-Key: {{apiKey}}
+
+###
+GET {{HotelListing.Api_HostAddress}}/api/basicauth
+Authorization: Basic dXNlcjFAbG9jYWxob3N0LmNvbTpQQHNzd29yZDE=
+
+###

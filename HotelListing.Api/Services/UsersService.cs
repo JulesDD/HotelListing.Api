@@ -5,10 +5,15 @@ using HotelListing.Api.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Authentication.OAuth.Claims;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
 
 namespace HotelListing.Api.Services;
 
-public class UsersService(UserManager<ApplicationUser> userManager) : IUsersService
+public class UsersService(UserManager<ApplicationUser> userManager, IConfiguration configuration) : IUsersService
 {
     public async Task<Result<RegisteredUserDto>> RegisterAsync(RegisterUserDto registerUserDto)
     {
@@ -55,6 +60,47 @@ public class UsersService(UserManager<ApplicationUser> userManager) : IUsersServ
         {
             return Result<string>.Failure(new Error(ErrorCodes.BadRequest, "Invalid password!"));
         }
-        return Result<string>.Success("Login Successful!");
+
+        //Issue a token
+        var token = await GenerateJwtToken(user);
+
+        return Result<string>.Success(token);
+    }
+
+    private async Task<string> GenerateJwtToken(ApplicationUser user)
+    {
+        // Implementation for generating JWT token goes here
+        // This is a placeholder implementation
+        var claims = new List<Claim>
+        { 
+            new Claim(JwtRegisteredClaimNames.Sub,user.Id),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim(JwtRegisteredClaimNames.Name, user.FullName)
+        };
+
+        // Add roles as claims
+        var roles = await userManager.GetRolesAsync(user);
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+        claims = claims.Distinct().ToList();
+
+        //Set Jwt token parameters and generate token
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JwtSettings:Key"]));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        //Create the token
+        var token = new JwtSecurityToken(
+            issuer: configuration["JwtSettings:Issuer"],
+            audience: configuration["JwtSettings:Audience"],
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(Convert.ToInt32(configuration["JwtSettings:DurationInMinutes"])),
+            signingCredentials: creds
+        );
+
+        //Return the token
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }
