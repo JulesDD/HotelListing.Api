@@ -3,9 +3,11 @@ using HotelListing.Api.Contracts;
 using HotelListing.Api.Data;
 using HotelListing.Api.Services;
 using HotelListing.Api.MappingProfiles;
+using HotelListing.Api.Constants;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +22,15 @@ builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
     .AddEntityFrameworkStores<HotelListingDbContext>();
 
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = DefaultAuthentication.BasicScheme;
+    options.DefaultChallengeScheme = DefaultAuthentication.BasicScheme;
+})
+    .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>(DefaultAuthentication.BasicScheme, _ =>
+    {
+
+    });
 builder.Services.AddAuthorization();
 
 builder.Services.AddAutoMapper(typeof(MappingProfileHotel).Assembly);
