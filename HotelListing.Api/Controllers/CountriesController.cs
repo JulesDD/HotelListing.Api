@@ -37,7 +37,10 @@ public class CountriesController(ICountriesServices countriesService) : BaseApiC
     }
 
     // POST: api/Countries
+    //Allow only administrators to create new countries. This is enforced using the [Authorize] attribute with the Roles parameter set to "Administrator".
+    //Also testing the creation of a new country should be done with an authenticated user who has the Administrator role.
     [HttpPost]
+    [Authorize(Roles = "Administrator")]
     public async Task<ActionResult<GetCountryDto>> PostCountry(CreateCountryDto createDto)
     {
         var result = await countriesService.CreateCountryAsync(createDto);

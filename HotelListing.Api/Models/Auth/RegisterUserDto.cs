@@ -12,4 +12,5 @@ public class RegisterUserDto
     public required string Email { get; set; } = string.Empty;
     [Required, MinLength(8)]
     public required string Password { get; set; } = string.Empty;
+    
 }

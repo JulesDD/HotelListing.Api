@@ -41,7 +41,10 @@ public class HotelsController(IHotelsServices hotelsService) : BaseApiController
     }
 
     // POST: api/Hotels
+    //Allow only administrators to create new hotels. This is enforced using the [Authorize] attribute with the Roles parameter set to "Administrator".
+    //Also testing the creation of a new hotel should be done with an authenticated user who has the Administrator role.
     [HttpPost]
+    [Authorize(Roles = "Administrator")]
     public async Task<ActionResult<GetHotelDto>> PostHotel(CreateHotelDto hotelDto)
     {
         var result = await hotelsService.CreateHotelAsync(hotelDto);

@@ -34,12 +34,16 @@ public class UsersService(UserManager<ApplicationUser> userManager, IConfigurati
             return Result<RegisteredUserDto>.BadRequest(errors);
         }
 
+        // Assign role to the user
+        await userManager.AddToRoleAsync(user, "User");
+
         var registeredUserDto = new RegisteredUserDto
         {
             Id = user.Id,
             FirstName = user.FirstName,
             LastName = user.LastName,
-            Email = user.Email
+            Email = user.Email,
+            Role = "User"
         };
 
 
