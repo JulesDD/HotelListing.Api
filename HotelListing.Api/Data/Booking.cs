@@ -9,11 +9,11 @@ public class Booking
     public Hotel? Hotel { get; set; }
     public required string UserId { get; set; }
     public ApplicationUser? User { get; set; }
-    public DateOnly CheckInDate { get; set; }
-    public DateOnly CheckOutDate { get; set; }
+    public DateTime CheckInDate { get; set; }
+    public DateTime CheckOutDate { get; set; }
     public int NumberOfGuests { get; set; }
     public decimal TotalPrice { get; set; }
-    public DateTime CreateAtUtc { get; set; } = DateTime.UtcNow;
-    public DateTime? UpdateAtUtc { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; }
     public BookingStatus Status { get; set; } = BookingStatus.Pending;
 }
