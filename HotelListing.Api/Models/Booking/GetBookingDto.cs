@@ -13,19 +13,3 @@ public record GetBookingDto
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc
 );
-
-public record CreateBookingDto
-(
-    int HotelId,
-    DateTime CheckInDate,
-    DateTime CheckOutDate,
-    int NumberOfGuests
-);
-
-public record UpdateBookingDto
-(
-    DateTime CheckInDate,
-    DateTime CheckOutDate,
-    int NumberOfGuests,
-    string Status
-);
