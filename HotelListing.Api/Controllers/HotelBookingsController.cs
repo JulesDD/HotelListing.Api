@@ -13,6 +13,7 @@ public class HotelBookingsController(IBookingService bookingService) : BaseApiCo
 {
     // GET: api/hotels/10/bookings
     [HttpGet]
+    [Authorize(Roles = "Administrator, Hotel Administrator")]
     public async Task<ActionResult<IEnumerable<GetBookingDto>>> GetHotelBookings([FromRoute] int hotelId)
     {
         var result = await bookingService.GetHotelBookingsAsync(hotelId);
@@ -47,6 +48,7 @@ public class HotelBookingsController(IBookingService bookingService) : BaseApiCo
     // PUT: api/hotels/10/bookings/5/admin/cancel
     // This endpoint allows an admin to cancel any booking
     [HttpPut("{bookingId:int}/admin/cancel")]
+    [Authorize(Roles = "Administrator, Hotel Administrator")]
     public async Task<IActionResult> AdminCancelBooking([FromRoute] int hotelId, [FromRoute] int bookingId)
     {
         var result = await bookingService.AdminCancelBookingsAsync(hotelId, bookingId);
@@ -56,6 +58,7 @@ public class HotelBookingsController(IBookingService bookingService) : BaseApiCo
     // PUT: api/hotels/10/bookings/5/admin/confirm
     // This endpoint allows an admin to confirm any booking
     [HttpPut("{bookingId:int}/admin/confirm")]
+    [Authorize(Roles = "Hotel Administrator, Administrator")]
     public async Task<IActionResult> AdminConfirmBooking([FromRoute] int hotelId, [FromRoute] int bookingId)
     {
         var result = await bookingService.AdminConfirmBookingsAsync(hotelId, bookingId);

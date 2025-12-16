@@ -29,6 +29,7 @@ public class HotelsController(IHotelsServices hotelsService) : BaseApiController
 
     // PUT: api/Hotels/5
     [HttpPut("{id}")]
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> PutHotel(int id, UpdateHotelDto hotelDto)
     {
         if (id != hotelDto.Id)
@@ -55,6 +56,7 @@ public class HotelsController(IHotelsServices hotelsService) : BaseApiController
 
     // DELETE: api/Hotels/5
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> DeleteHotel(int id)
     {
         var result = await hotelsService.DeleteHotelAsync(id);

@@ -30,6 +30,7 @@ public class CountriesController(ICountriesServices countriesService) : BaseApiC
 
     // PUT: api/Countries/5
     [HttpPut("{id}")]
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> PutCountry(int id, UpdateCountryDto updateDto)
     {
         var result = await countriesService.UpdateCountryAsync(id, updateDto);
@@ -51,6 +52,7 @@ public class CountriesController(ICountriesServices countriesService) : BaseApiC
 
     // DELETE: api/Countries/5
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> DeleteCountry(int id)
     {
         var result = await countriesService.DeleteCountryAsync(id);

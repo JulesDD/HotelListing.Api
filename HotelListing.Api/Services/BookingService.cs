@@ -8,7 +8,7 @@ using HotelListing.Api.Contracts;
 
 namespace HotelListing.Api.Services;
 
-public class BookingService(HotelListingDbContext context, IHttpContextAccessor httpContextAccessor) : IBookingService
+public class BookingService(HotelListingDbContext context, IUsersService userService) : IBookingService
 {
     public async Task<Result<IEnumerable<GetBookingDto>>> GetHotelBookingsAsync(int hotelId)
     {
@@ -44,7 +44,7 @@ public class BookingService(HotelListingDbContext context, IHttpContextAccessor 
     public async Task<Result<GetBookingDto>> CreateBookingsAsync(CreateBookingDto createBookingDto)
     {
         // Get user ID from JWT claims
-        var userId = httpContextAccessor?.HttpContext?.User?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        var userId = userService.GetUserId;
         if (string.IsNullOrEmpty(userId))
         {
             return Result<GetBookingDto>.Failure(new Error(ErrorCodes.Validation, "User is not authorized."));
@@ -122,7 +122,7 @@ public class BookingService(HotelListingDbContext context, IHttpContextAccessor 
     public async Task<Result<GetBookingDto>> UpdateBookingsAsync(int hotelId, int bookingId, UpdateBookingDto updateBookingDto)
     {
         // Get user ID from JWT claims
-        var userId = httpContextAccessor?.HttpContext?.User?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        var userId = userService.GetUserId;
         if (string.IsNullOrEmpty(userId))
         {
             return Result<GetBookingDto>.Failure(new Error(ErrorCodes.Validation, "User is not authorized."));
@@ -201,7 +201,7 @@ public class BookingService(HotelListingDbContext context, IHttpContextAccessor 
     public async Task<Result> CancelBookingsAsync(int hotelId, int bookingId)
     {
         // only validated user can cancel their booking
-        var userId = httpContextAccessor?.HttpContext?.User?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        var userId = userService.GetUserId;
 
         if (string.IsNullOrEmpty(userId))
         {
@@ -237,7 +237,7 @@ public class BookingService(HotelListingDbContext context, IHttpContextAccessor 
     public async Task<Result> ConfirmBookingsAsync(int hotelId, int bookingId)
     {
         // only validated user can confirm their booking
-        var userId = httpContextAccessor?.HttpContext?.User?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        var userId = userService.GetUserId;
         if (string.IsNullOrEmpty(userId))
         {
             return Result.Failure(new Error(ErrorCodes.Validation, "User is not authorized."));
@@ -269,7 +269,7 @@ public class BookingService(HotelListingDbContext context, IHttpContextAccessor 
     public async Task<Result> AdminCancelBookingsAsync(int hotelId, int bookingId)
     {
         // verify that the user is an admin
-        var user = httpContextAccessor?.HttpContext?.User?.FindFirst(JwtRegisteredClaimNames.Sub).Value;
+        var user = userService.GetUserId;
         var isUserAdmin = await context.HotelAdmins
             .AnyAsync(ha => ha.UserId == user && ha.HotelId == hotelId);
         if (!isUserAdmin)
@@ -304,7 +304,7 @@ public class BookingService(HotelListingDbContext context, IHttpContextAccessor 
     public async Task<Result> AdminConfirmBookingsAsync(int hotelId, int bookingId)
     {
         // verify that the user is an admin
-        var user = httpContextAccessor?.HttpContext?.User?.FindFirst(JwtRegisteredClaimNames.Sub).Value;
+        var user = userService.GetUserId;
         var isUserAdmin = await context.HotelAdmins
             .AnyAsync(ha => ha.UserId == user && ha.HotelId == hotelId);
         if (!isUserAdmin)

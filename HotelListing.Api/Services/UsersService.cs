@@ -13,7 +13,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace HotelListing.Api.Services;
 
-public class UsersService(UserManager<ApplicationUser> userManager, IConfiguration configuration) : IUsersService
+public class UsersService(UserManager<ApplicationUser> userManager, IConfiguration configuration, IHttpContextAccessor httpContextAccessor) : IUsersService
 {
     public async Task<Result<RegisteredUserDto>> RegisterAsync(RegisterUserDto registerUserDto)
     {
@@ -70,6 +70,8 @@ public class UsersService(UserManager<ApplicationUser> userManager, IConfigurati
 
         return Result<string>.Success(token);
     }
+
+    public string GetUserId => httpContextAccessor?.HttpContext?.User?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? string.Empty;
 
     private async Task<string> GenerateJwtToken(ApplicationUser user)
     {
