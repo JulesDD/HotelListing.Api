@@ -50,19 +50,6 @@ public class BookingService(HotelListingDbContext context, IUsersService userSer
             return Result<GetBookingDto>.Failure(new Error(ErrorCodes.Validation, "User is not authorized."));
         }
 
-        // Validate booking dates by calculating the number of nights
-        var nights = (createBookingDto.CheckOutDate - createBookingDto.CheckInDate).Days;
-        if (nights <= 0)
-        {
-            return Result<GetBookingDto>.Failure(new Error(ErrorCodes.Validation, "Check-out date must be after check-in date."));
-        }
-
-        // Check the amount of guests
-        if (createBookingDto.NumberOfGuests <= 0)
-        {
-            return Result<GetBookingDto>.Failure(new Error(ErrorCodes.Validation, "Number of guests must be at least 1."));
-        }
-
         // Check if the hotel exists
         var hotel = await context.Hotels
             .Where(h => h.Id == createBookingDto.HotelId)
@@ -83,6 +70,8 @@ public class BookingService(HotelListingDbContext context, IUsersService userSer
         {
             return Result<GetBookingDto>.Failure(new Error(ErrorCodes.Conflict, "The selected dates overlap with an existing booking."));
         }
+
+        var nights = (createBookingDto.CheckOutDate - createBookingDto.CheckInDate).Days;
 
         // Calculate total price and create the booking
         var totalPrice = nights * hotel.PerNightRate;
@@ -128,19 +117,6 @@ public class BookingService(HotelListingDbContext context, IUsersService userSer
             return Result<GetBookingDto>.Failure(new Error(ErrorCodes.Validation, "User is not authorized."));
         }
 
-        // Validate booking dates by calculating the number of nights
-        var nights = (updateBookingDto.CheckOutDate - updateBookingDto.CheckInDate).Days;
-        if (nights <= 0)
-        {
-            return Result<GetBookingDto>.Failure(new Error(ErrorCodes.Validation, "Check-out date must be after check-in date."));
-        }
-
-        // Check the amount of guests
-        if (updateBookingDto.NumberOfGuests <= 0)
-        {
-            return Result<GetBookingDto>.Failure(new Error(ErrorCodes.Validation, "Number of guests must be at least 1."));
-        }
-
         // Check for overlapping bookings
         var overlappingBookingExists = await context.Bookings
             .AnyAsync(b => b.HotelId == hotelId &&
@@ -169,7 +145,8 @@ public class BookingService(HotelListingDbContext context, IUsersService userSer
         {
             return Result<GetBookingDto>.Failure(new Error(ErrorCodes.Conflict, "Cannot update a cancelled booking."));
         }
-
+        
+        var nights = (updateBookingDto.CheckOutDate - updateBookingDto.CheckInDate).Days;
         // Update booking details
         var ratePerNight = booking.Hotel!.PerNightRate;
         booking.CheckInDate = updateBookingDto.CheckInDate;
