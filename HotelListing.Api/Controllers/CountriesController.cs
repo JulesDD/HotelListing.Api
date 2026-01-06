@@ -1,6 +1,6 @@
 ﻿using HotelListing.Api.Contracts;
 using HotelListing.Api.Models.Country;
-using HotelListing.Api.Results;
+using HotelListing.Api.Common.Results;
 using HotelListing.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

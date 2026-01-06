@@ -2,6 +2,7 @@
 using HotelListing.Api.Data;
 using HotelListing.Api.Models.Auth;
 using HotelListing.Api.Results;
+using HotelListing.Api.Common.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

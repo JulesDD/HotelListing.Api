@@ -2,14 +2,12 @@
 using HotelListing.Api.Data;
 using HotelListing.Api.Models.Auth;
 using HotelListing.Api.Results;
-using Microsoft.AspNetCore.Authorization;
+using HotelListing.Api.Common.Constants;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-using System.IdentityModel.Tokens.Jwt;
-using Microsoft.AspNetCore.Authentication.OAuth.Claims;
-using System.Text;
 using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace HotelListing.Api.Services;
 
@@ -35,7 +33,7 @@ public class UsersService(UserManager<ApplicationUser> userManager, IConfigurati
         }
 
         // Assign role to the user
-        await userManager.AddToRoleAsync(user, "User");
+        await userManager.AddToRoleAsync(user, DefaultRoles.User);
 
         var registeredUserDto = new RegisteredUserDto
         {
@@ -43,7 +41,7 @@ public class UsersService(UserManager<ApplicationUser> userManager, IConfigurati
             FirstName = user.FirstName,
             LastName = user.LastName,
             Email = user.Email,
-            Role = "User"
+            Role = DefaultRoles.User
         };
 
 

@@ -1,4 +1,5 @@
-﻿using HotelListing.Api.Data;
+﻿using HotelListing.Api.Common.Constants;
+using HotelListing.Api.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
@@ -32,7 +33,7 @@ public class AdminFilter(HotelListingDbContext hotelListingDbContext) : IAsyncAu
         }
 
         // Check if the user has the "Administrator" role
-        if (!user.IsInRole("Administrator"))
+        if (!user.IsInRole(DefaultRoles.Administrator))
         {
             context.Result = new ForbidResult();
             return;

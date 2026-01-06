@@ -1,4 +1,6 @@
-﻿namespace HotelListing.Api.Models.Auth;
+﻿using HotelListing.Api.Common.Constants;
+
+namespace HotelListing.Api.Models.Auth;
 
 public class RegisteredUserDto
 {
@@ -6,5 +8,5 @@ public class RegisteredUserDto
     public required string FirstName { get; set; } = string.Empty;
     public required string LastName { get; set; } = string.Empty;
     public required string Email { get; set; } = string.Empty;
-    public string? Role { get; set; } = "User";
+    public string? Role { get; set; } = DefaultRoles.User;
 }

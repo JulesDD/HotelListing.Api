@@ -4,8 +4,8 @@ using HotelListing.Api.Contracts;
 using HotelListing.Api.Data;
 using HotelListing.Api.Models.Hotel;
 using HotelListing.Api.Results;
+using HotelListing.Api.Common.Constants;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
 
 namespace HotelListing.Api.Services;
 

@@ -2,6 +2,7 @@
 using HotelListing.Api.Results;
 using HotelListing.Api.Models.Booking;
 using HotelListing.Api.Data.Enums;
+using HotelListing.Api.Common.Constants;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.EntityFrameworkCore;
 using HotelListing.Api.Contracts;
