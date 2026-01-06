@@ -4,12 +4,10 @@ namespace HotelListing.Api.Models.Booking;
 
 public record CreateBookingDto
 (
-    [Required]
-    int HotelId,
+    [Required] int HotelId,
     DateTime CheckInDate,
     DateTime CheckOutDate,
-    [Required][Range(minimum:1, maximum:10)]
-    int NumberOfGuests
+    [Required] [Range(minimum:1, maximum:10)] int NumberOfGuests
 ) : IValidatableObject
 {
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

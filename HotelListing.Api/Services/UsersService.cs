@@ -71,7 +71,10 @@ public class UsersService(UserManager<ApplicationUser> userManager, IConfigurati
         return Result<string>.Success(token);
     }
 
-    public string GetUserId => httpContextAccessor?.HttpContext?.User?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? string.Empty;
+    // Get the user id from the JWT token
+    // If not found, return empty string
+    public string GetUserId => httpContextAccessor?.HttpContext?.User?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? httpContextAccessor?
+        .HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
 
     private async Task<string> GenerateJwtToken(ApplicationUser user)
     {

@@ -4,7 +4,7 @@ namespace HotelListing.Api.Data;
 
 public class Booking 
 {
-    public int Id { get; set; }
+    public int BookingId { get; set; }
     public required int HotelId { get; set; }
     public Hotel? Hotel { get; set; }
     public required string UserId { get; set; }

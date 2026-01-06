@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace HotelListing.Api.AuthorizationFilters;
 
@@ -38,7 +39,7 @@ public class AdminFilter(HotelListingDbContext hotelListingDbContext) : IAsyncAu
         }
 
         // Optionally, you can retrieve the user ID from the claims if needed
-        var userId = user.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        var userId = user.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrWhiteSpace(userId))
         {
             context.Result = new UnauthorizedResult();

@@ -5,10 +5,12 @@ using HotelListing.Api.Data.Enums;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.EntityFrameworkCore;
 using HotelListing.Api.Contracts;
+using AutoMapper.QueryableExtensions;
+using AutoMapper;
 
 namespace HotelListing.Api.Services;
 
-public class BookingService(HotelListingDbContext context, IUsersService userService) : IBookingService
+public class BookingService(HotelListingDbContext context, IUsersService userService, IMapper mapper) : IBookingService
 {
     public async Task<Result<IEnumerable<GetBookingDto>>> GetHotelBookingsAsync(int hotelId)
     {
@@ -23,19 +25,7 @@ public class BookingService(HotelListingDbContext context, IUsersService userSer
         var bookings = await context.Bookings
             .Where(b => b.HotelId == hotelId)
             .OrderBy(b => b.CheckInDate)
-            .Select(b => new GetBookingDto
-            (
-                b.Id,
-                b.HotelId,
-                b.Hotel!.Name,
-                b.CheckInDate,
-                b.CheckOutDate,
-                b.NumberOfGuests,
-                b.TotalPrice,
-                b.Status.ToString(),
-                b.CreatedAtUtc,
-                b.UpdatedAtUtc
-            ))
+            .ProjectTo<GetBookingDto>(mapper.ConfigurationProvider)
             .ToListAsync();
 
         return Result<IEnumerable<GetBookingDto>>.Success(bookings);
@@ -53,6 +43,7 @@ public class BookingService(HotelListingDbContext context, IUsersService userSer
         // Check if the hotel exists
         var hotel = await context.Hotels
             .Where(h => h.Id == createBookingDto.HotelId)
+            .ProjectTo<GetBookingDto>(mapper.ConfigurationProvider)
             .FirstOrDefaultAsync();
         if (hotel == null)
         {
@@ -74,7 +65,7 @@ public class BookingService(HotelListingDbContext context, IUsersService userSer
         var nights = (createBookingDto.CheckOutDate - createBookingDto.CheckInDate).Days;
 
         // Calculate total price and create the booking
-        var totalPrice = nights * hotel.PerNightRate;
+        var totalPrice = hotel.TotalPrice / nights * nights;
         var booking = new Booking
         {
             HotelId = createBookingDto.HotelId,
@@ -87,15 +78,16 @@ public class BookingService(HotelListingDbContext context, IUsersService userSer
             CreatedAtUtc = DateTime.UtcNow,
             UpdatedAtUtc = DateTime.UtcNow
         };
+        booking.UserId = userId;
         context.Bookings.Add(booking);
         await context.SaveChangesAsync();
 
         // Prepare the result DTO
         var createdBookings = new GetBookingDto
         (
-            booking.Id,
+            booking.BookingId,
             hotel.Id,
-            hotel.Name,
+            hotel.HotelName,
             createBookingDto.CheckInDate,
             createBookingDto.CheckOutDate,
             createBookingDto.NumberOfGuests,
@@ -132,7 +124,7 @@ public class BookingService(HotelListingDbContext context, IUsersService userSer
         // Retrieve the booking to be updated
         var booking = await context.Bookings
             .Include(b => b.Hotel)
-            .FirstOrDefaultAsync(b => b.Id == bookingId 
+            .FirstOrDefaultAsync(b => b.BookingId == bookingId 
             && b.HotelId == hotelId
             && b.UserId == userId);
 
@@ -160,7 +152,7 @@ public class BookingService(HotelListingDbContext context, IUsersService userSer
         // Prepare the result DTO
         var updatedBooking = new GetBookingDto
         (
-            booking.Id,
+            booking.BookingId,
             booking.HotelId,
             booking.Hotel!.Name,
             booking.CheckInDate,
@@ -188,7 +180,7 @@ public class BookingService(HotelListingDbContext context, IUsersService userSer
         // Retrieve the booking to be cancelled
         var booking = await context.Bookings
             .Include(b => b.Hotel)
-            .FirstOrDefaultAsync(b => b.Id == bookingId
+            .FirstOrDefaultAsync(b => b.BookingId == bookingId
             && b.HotelId == hotelId
             && b.UserId == userId);
 
@@ -223,7 +215,7 @@ public class BookingService(HotelListingDbContext context, IUsersService userSer
         // Retrieve the booking to be confirmed
         var booking = await context.Bookings
             .Include(b => b.Hotel)
-            .FirstOrDefaultAsync(b => b.Id == bookingId
+            .FirstOrDefaultAsync(b => b.BookingId == bookingId
             && b.HotelId == hotelId
             && b.UserId == userId);
         if (booking is null)
@@ -257,7 +249,7 @@ public class BookingService(HotelListingDbContext context, IUsersService userSer
         // Retrieve the booking to be cancelled
         var booking = await context.Bookings
             .Include(b => b.Hotel)
-            .FirstOrDefaultAsync(b => b.Id == bookingId
+            .FirstOrDefaultAsync(b => b.BookingId == bookingId
             && b.HotelId == hotelId);
         if (booking is null)
         {
@@ -291,7 +283,7 @@ public class BookingService(HotelListingDbContext context, IUsersService userSer
         // Retrieve the booking to be confirmed
         var booking = await context.Bookings
             .Include(b => b.Hotel)
-            .FirstOrDefaultAsync(b => b.Id == bookingId
+            .FirstOrDefaultAsync(b => b.BookingId == bookingId
             && b.HotelId == hotelId);
         if (booking is null)
         {
