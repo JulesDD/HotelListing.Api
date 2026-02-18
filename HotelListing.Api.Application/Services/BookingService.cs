@@ -1,0 +1,308 @@
+﻿using HotelListing.Api.Domain;
+using HotelListing.Api.Common.Constants;
+using HotelListing.Api.Domain.Enums;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.EntityFrameworkCore;
+using AutoMapper.QueryableExtensions;
+using AutoMapper;
+using HotelListing.Api.Common.Result;
+using HotelListing.Api.Application.Models.Booking;
+using HotelListing.Api.Application.Contracts;
+
+
+namespace HotelListing.Api.Application.Services;
+
+public class BookingService(HotelListingDbContext context, IUsersService userService, IMapper mapper) : IBookingService
+{
+    public async Task<Result<IEnumerable<GetBookingDto>>> GetHotelBookingsAsync(int hotelId)
+    {
+        // Check if the hotel exists
+        var hotelExists = await context.Hotels.AnyAsync(h => h.Id == hotelId);
+        if (!hotelExists)
+        {
+            return Result<IEnumerable<GetBookingDto>>.Failure(new Error(ErrorCodes.NotFound, $"Hotel '{hotelId}' was not found."));
+        }
+
+        // Retrieve bookings for the specified hotel ordered by check-in date
+        var bookings = await context.Bookings
+            .Where(b => b.HotelId == hotelId)
+            .OrderBy(b => b.CheckInDate)
+            .ProjectTo<GetBookingDto>(mapper.ConfigurationProvider)
+            .ToListAsync();
+
+        return Result<IEnumerable<GetBookingDto>>.Success(bookings);
+    }
+
+    public async Task<Result<GetBookingDto>> CreateBookingsAsync(CreateBookingDto createBookingDto)
+    {
+        // Get user ID from JWT claims
+        var userId = userService.GetUserId;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Result<GetBookingDto>.Failure(new Error(ErrorCodes.Validation, "User is not authorized."));
+        }
+
+        // Check if the hotel exists
+        var hotel = await context.Hotels
+            .Where(h => h.Id == createBookingDto.HotelId)
+            .ProjectTo<GetBookingDto>(mapper.ConfigurationProvider)
+            .FirstOrDefaultAsync();
+        if (hotel == null)
+        {
+            return Result<GetBookingDto>.Failure(new Error(ErrorCodes.NotFound, $"Hotel '{createBookingDto.HotelId}' was not found."));
+        }
+
+        // Check for overlapping bookings
+        var overlappingBookingExists = await context.Bookings
+            .AnyAsync(b => b.HotelId == createBookingDto.HotelId &&
+                           b.Status == BookingStatus.Confirmed &&
+                           b.CheckInDate < createBookingDto.CheckOutDate &&
+                           b.CheckOutDate > createBookingDto.CheckInDate &&
+                           b.UserId == userId);
+        if (overlappingBookingExists)
+        {
+            return Result<GetBookingDto>.Failure(new Error(ErrorCodes.Conflict, "The selected dates overlap with an existing booking."));
+        }
+
+        var nights = (createBookingDto.CheckOutDate - createBookingDto.CheckInDate).Days;
+
+        // Calculate total price and create the booking
+        var totalPrice = hotel.TotalPrice / nights * nights;
+        var booking = new Booking
+        {
+            HotelId = createBookingDto.HotelId,
+            UserId = userId,
+            CheckInDate = createBookingDto.CheckInDate,
+            CheckOutDate = createBookingDto.CheckOutDate,
+            NumberOfGuests = createBookingDto.NumberOfGuests,
+            TotalPrice = totalPrice,
+            Status = BookingStatus.Pending,
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow
+        };
+        booking.UserId = userId;
+        context.Bookings.Add(booking);
+        await context.SaveChangesAsync();
+
+        // Prepare the result DTO
+        var createdBookings = new GetBookingDto
+        (
+            booking.BookingId,
+            hotel.Id,
+            hotel.HotelName,
+            createBookingDto.CheckInDate,
+            createBookingDto.CheckOutDate,
+            createBookingDto.NumberOfGuests,
+            totalPrice,
+            BookingStatus.Pending.ToString(),
+            booking.CreatedAtUtc,
+            booking.UpdatedAtUtc
+        );
+
+        return Result<GetBookingDto>.Success(createdBookings);
+    }
+
+    public async Task<Result<GetBookingDto>> UpdateBookingsAsync(int hotelId, int bookingId, UpdateBookingDto updateBookingDto)
+    {
+        // Get user ID from JWT claims
+        var userId = userService.GetUserId;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Result<GetBookingDto>.Failure(new Error(ErrorCodes.Validation, "User is not authorized."));
+        }
+
+        // Check for overlapping bookings
+        var overlappingBookingExists = await context.Bookings
+            .AnyAsync(b => b.HotelId == hotelId &&
+                           b.Status == BookingStatus.Confirmed &&
+                           b.CheckInDate < updateBookingDto.CheckOutDate &&
+                           b.CheckOutDate > updateBookingDto.CheckInDate &&
+                           b.UserId == userId);
+        if (overlappingBookingExists)
+        {
+            return Result<GetBookingDto>.Failure(new Error(ErrorCodes.Conflict, "The selected dates overlap with an existing booking."));
+        }
+
+        // Retrieve the booking to be updated
+        var booking = await context.Bookings
+            .Include(b => b.Hotel)
+            .FirstOrDefaultAsync(b => b.BookingId == bookingId 
+            && b.HotelId == hotelId
+            && b.UserId == userId);
+
+        if (booking is null)
+        {
+            return Result<GetBookingDto>.Failure(new Error(ErrorCodes.NotFound, $"Booking '{bookingId}' for Hotel '{hotelId}' was not found."));
+        }
+        // Check if booking was cancelled
+        if (booking.Status == BookingStatus.Cancelled)
+        {
+            return Result<GetBookingDto>.Failure(new Error(ErrorCodes.Conflict, "Cannot update a cancelled booking."));
+        }
+        
+        var nights = (updateBookingDto.CheckOutDate - updateBookingDto.CheckInDate).Days;
+        // Update booking details
+        var ratePerNight = booking.Hotel!.PerNightRate;
+        booking.CheckInDate = updateBookingDto.CheckInDate;
+        booking.CheckOutDate = updateBookingDto.CheckOutDate;
+        booking.NumberOfGuests = updateBookingDto.NumberOfGuests;
+        booking.TotalPrice = ratePerNight * nights;
+        booking.UpdatedAtUtc = DateTime.UtcNow;
+        
+        await context.SaveChangesAsync();
+
+        // Prepare the result DTO
+        var updatedBooking = new GetBookingDto
+        (
+            booking.BookingId,
+            booking.HotelId,
+            booking.Hotel!.Name,
+            booking.CheckInDate,
+            booking.CheckOutDate,
+            booking.NumberOfGuests,
+            booking.TotalPrice,
+            booking.Status.ToString(),
+            booking.CreatedAtUtc,
+            booking.UpdatedAtUtc
+        );
+
+        return Result<GetBookingDto>.Success(updatedBooking);
+    }
+
+    public async Task<Result> CancelBookingsAsync(int hotelId, int bookingId)
+    {
+        // only validated user can cancel their booking
+        var userId = userService.GetUserId;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Result.Failure(new Error(ErrorCodes.Validation, "User is not authorized."));
+        }
+        
+        // Retrieve the booking to be cancelled
+        var booking = await context.Bookings
+            .Include(b => b.Hotel)
+            .FirstOrDefaultAsync(b => b.BookingId == bookingId
+            && b.HotelId == hotelId
+            && b.UserId == userId);
+
+        if (booking is null)
+        {
+            return Result.Failure(new Error(ErrorCodes.NotFound, $"Booking '{bookingId}' for Hotel '{hotelId}' was not found."));
+        }
+        
+        // Check if booking was cancelled
+        if (booking.Status == BookingStatus.Cancelled)
+        {
+            return Result.Failure(new Error(ErrorCodes.Conflict, "Cannot update a cancelled booking."));
+        }
+
+        // Cancel the booking
+        booking.Status = BookingStatus.Cancelled;
+        booking.UpdatedAtUtc = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+
+        return Result.Success();
+    }
+
+    public async Task<Result> ConfirmBookingsAsync(int hotelId, int bookingId)
+    {
+        // only validated user can confirm their booking
+        var userId = userService.GetUserId;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Result.Failure(new Error(ErrorCodes.Validation, "User is not authorized."));
+        }
+        
+        // Retrieve the booking to be confirmed
+        var booking = await context.Bookings
+            .Include(b => b.Hotel)
+            .FirstOrDefaultAsync(b => b.BookingId == bookingId
+            && b.HotelId == hotelId
+            && b.UserId == userId);
+        if (booking is null)
+        {
+            return Result.Failure(new Error(ErrorCodes.NotFound, $"Booking '{bookingId}' for Hotel '{hotelId}' was not found."));
+        }
+        
+        // Check if booking was cancelled
+        if (booking.Status == BookingStatus.Cancelled)
+        {
+            return Result.Failure(new Error(ErrorCodes.Conflict, "Cannot confirm a cancelled booking."));
+        }
+        // Confirm the booking
+        booking.Status = BookingStatus.Confirmed;
+        booking.UpdatedAtUtc = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+        return Result.Success();
+    }
+
+    public async Task<Result> AdminCancelBookingsAsync(int hotelId, int bookingId)
+    {
+        // verify that the user is an admin
+        var user = userService.GetUserId;
+        var isUserAdmin = await context.HotelAdmins
+            .AnyAsync(ha => ha.UserId == user && ha.HotelId == hotelId);
+        if (!isUserAdmin)
+        {
+            return Result.Failure(new Error(ErrorCodes.Unauthorized, "User is not authorized to perform this action."));
+        }
+
+        // Retrieve the booking to be cancelled
+        var booking = await context.Bookings
+            .Include(b => b.Hotel)
+            .FirstOrDefaultAsync(b => b.BookingId == bookingId
+            && b.HotelId == hotelId);
+        if (booking is null)
+        {
+            return Result.Failure(new Error(ErrorCodes.NotFound, $"Booking '{bookingId}' for Hotel '{hotelId}' was not found."));
+        }
+        
+        // Check if booking was cancelled
+        if (booking.Status == BookingStatus.Cancelled)
+        {
+            return Result.Failure(new Error(ErrorCodes.Conflict, "Cannot update a cancelled booking."));
+        }
+        // Cancel the booking
+        booking.Status = BookingStatus.Cancelled;
+        booking.UpdatedAtUtc = DateTime.UtcNow;
+
+        await context.SaveChangesAsync();
+
+        return Result.Success();
+    }
+
+    public async Task<Result> AdminConfirmBookingsAsync(int hotelId, int bookingId)
+    {
+        // verify that the user is an admin
+        var user = userService.GetUserId;
+        var isUserAdmin = await context.HotelAdmins
+            .AnyAsync(ha => ha.UserId == user && ha.HotelId == hotelId);
+        if (!isUserAdmin)
+        {
+            return Result.Failure(new Error(ErrorCodes.Unauthorized, "User is not authorized to perform this action."));
+        }
+        // Retrieve the booking to be confirmed
+        var booking = await context.Bookings
+            .Include(b => b.Hotel)
+            .FirstOrDefaultAsync(b => b.BookingId == bookingId
+            && b.HotelId == hotelId);
+        if (booking is null)
+        {
+            return Result.Failure(new Error(ErrorCodes.NotFound, $"Booking '{bookingId}' for Hotel '{hotelId}' was not found."));
+        }
+        
+        // Check if booking was cancelled
+        if (booking.Status == BookingStatus.Cancelled)
+        {
+            return Result.Failure(new Error(ErrorCodes.Conflict, "Cannot confirm a cancelled booking."));
+        }
+        // Confirm the booking
+        booking.Status = BookingStatus.Confirmed;
+        booking.UpdatedAtUtc = DateTime.UtcNow;
+
+        await context.SaveChangesAsync();
+
+        return Result.Success();
+    }
+}

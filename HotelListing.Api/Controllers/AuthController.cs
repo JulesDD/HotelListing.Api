@@ -1,11 +1,11 @@
-﻿using HotelListing.Api.Contracts;
-using HotelListing.Api.Data;
-using HotelListing.Api.Models.Auth;
-using HotelListing.Api.Results;
+﻿using HotelListing.Api.Domain;
+using HotelListing.Api.Common.Result;
 using HotelListing.Api.Common.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using HotelListing.Api.Application.Contracts;
+using HotelListing.Api.Application.Models.Auth;
 
 //Created a controller for authentication
 namespace HotelListing.Api.Controllers;

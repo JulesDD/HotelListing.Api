@@ -1,7 +1,7 @@
-﻿using HotelListing.Api.Results;
-using HotelListing.Api.Common.Constants;
+﻿using HotelListing.Api.Common.Constants;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq;
+using HotelListing.Api.Common.Result;
 
 
 namespace HotelListing.Api.Controllers;

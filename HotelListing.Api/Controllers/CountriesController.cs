@@ -1,9 +1,9 @@
-﻿using HotelListing.Api.Contracts;
-using HotelListing.Api.Models.Country;
-using HotelListing.Api.Common.Results;
-using HotelListing.Api.Services;
+﻿using HotelListing.Api.Common.Result;
+using HotelListing.Api.Application.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using HotelListing.Api.Application.Models.Country;
+using HotelListing.Api.Application.Contracts;
 
 namespace HotelListing.Api.Controllers;
 

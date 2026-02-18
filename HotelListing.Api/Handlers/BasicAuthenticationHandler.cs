@@ -1,6 +1,6 @@
-﻿using HotelListing.Api.Contracts;
-using HotelListing.Api.Data;
-using HotelListing.Api.Models.Auth;
+﻿using HotelListing.Api.Application.Contracts;
+using HotelListing.Api.Domain;
+using HotelListing.Api.Application.Models.Auth;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
