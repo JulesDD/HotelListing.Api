@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using HotelListing.Api.Application.Models.Booking;
 using HotelListing.Api.Application.Contracts;
+using HotelListing.Api.Common.Models.Paging;
 
 namespace HotelListing.Api.Controllers;
 
@@ -16,9 +17,9 @@ public class HotelBookingsController(IBookingService bookingService) : BaseApiCo
     // This endpoint is restricted to admin users only using the AdminAttributes filter
     [HttpGet]
     [AdminAttributes]
-    public async Task<ActionResult<IEnumerable<GetBookingDto>>> GetHotelBookings([FromRoute] int hotelId)
+    public async Task<ActionResult<PagedResult<GetBookingDto>>> GetHotelBookings([FromRoute] int hotelId, [FromQuery] PaginationParameters paginationParameters)
     {
-        var result = await bookingService.GetHotelBookingsAsync(hotelId);
+        var result = await bookingService.GetHotelBookingsAsync(hotelId, paginationParameters);
 
         return ToActionResult(result);
     }

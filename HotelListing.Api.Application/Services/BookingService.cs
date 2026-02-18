@@ -8,19 +8,21 @@ using AutoMapper;
 using HotelListing.Api.Common.Result;
 using HotelListing.Api.Application.Models.Booking;
 using HotelListing.Api.Application.Contracts;
+using HotelListing.Api.Common.Models.Paging;
+using HotelListing.Api.Common.Models.Extension;
 
 
 namespace HotelListing.Api.Application.Services;
 
 public class BookingService(HotelListingDbContext context, IUsersService userService, IMapper mapper) : IBookingService
 {
-    public async Task<Result<IEnumerable<GetBookingDto>>> GetHotelBookingsAsync(int hotelId)
+    public async Task<Result<PagedResult<GetBookingDto>>> GetHotelBookingsAsync(int hotelId, PaginationParameters paginationParameters)
     {
         // Check if the hotel exists
         var hotelExists = await context.Hotels.AnyAsync(h => h.Id == hotelId);
         if (!hotelExists)
         {
-            return Result<IEnumerable<GetBookingDto>>.Failure(new Error(ErrorCodes.NotFound, $"Hotel '{hotelId}' was not found."));
+            return Result<PagedResult<GetBookingDto>>.Failure(new Error(ErrorCodes.NotFound, $"Hotel '{hotelId}' was not found."));
         }
 
         // Retrieve bookings for the specified hotel ordered by check-in date
@@ -28,9 +30,9 @@ public class BookingService(HotelListingDbContext context, IUsersService userSer
             .Where(b => b.HotelId == hotelId)
             .OrderBy(b => b.CheckInDate)
             .ProjectTo<GetBookingDto>(mapper.ConfigurationProvider)
-            .ToListAsync();
+            .ToPagedResultAsync(paginationParameters);
 
-        return Result<IEnumerable<GetBookingDto>>.Success(bookings);
+        return Result<PagedResult<GetBookingDto>>.Success(bookings);
     }
 
     public async Task<Result<GetBookingDto>> CreateBookingsAsync(CreateBookingDto createBookingDto)
