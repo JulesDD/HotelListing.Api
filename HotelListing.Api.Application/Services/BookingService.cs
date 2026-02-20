@@ -1,6 +1,6 @@
 ﻿using HotelListing.Api.Domain;
 using HotelListing.Api.Common.Constants;
-using HotelListing.Api.Domain.Enums;
+using HotelListing.Api.Common.Enums;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.EntityFrameworkCore;
 using AutoMapper.QueryableExtensions;
