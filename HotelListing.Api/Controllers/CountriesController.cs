@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using HotelListing.Api.Application.Models.Country;
 using HotelListing.Api.Application.Contracts;
+using HotelListing.Api.Common.Models.Filtering;
 
 namespace HotelListing.Api.Controllers;
 
@@ -14,9 +15,9 @@ public class CountriesController(ICountriesServices countriesService) : BaseApiC
 {
     // GET: api/Countries
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<GetCountriesDto>>> GetCountries()
+    public async Task<ActionResult<IEnumerable<GetCountriesDto>>> GetCountries(CountryFilteringParameters countryFilteringParameters)
     {
-        var result = await countriesService.GetCountriesAsync();
+        var result = await countriesService.GetCountriesAsync(countryFilteringParameters);
         return ToActionResult(result);
     }
 

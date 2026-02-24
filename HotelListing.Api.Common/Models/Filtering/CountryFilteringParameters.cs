@@ -2,6 +2,4 @@
 
 public class CountryFilteringParameters : BaseFilteringParameters
 {
-    public string? CountryName { get; set; }
-    public bool? HasHotels { get; set; }
 }

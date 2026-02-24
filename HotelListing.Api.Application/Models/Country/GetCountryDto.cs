@@ -1,15 +1,24 @@
 ﻿using HotelListing.Api.Application.Models.Hotel;
+using HotelListing.Api.Common.Models.Paging;
 
 namespace HotelListing.Api.Application.Models.Country;
 
-public record GetCountryDto(
-    int CountryId,
-    string Name,
-    string ShortName,
-    List<GetHotelSlimDto>? Hotels
-);
+public class GetCountryDto
+{
+    public int CountryId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string ShortName { get; set; } = string.Empty;
+    public List<GetHotelSlimDto> Hotels { get; set; } = new();
+};
 
-public record GetCountriesDto(
+public class GetCountryHotelsDto
+{
+    public int CountryId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public PagedResult<GetHotelSlimDto> Hotels { get; set; } = new();
+};
+
+public class GetCountriesDto(
     int CountryId,
     string Name,
     string ShortName
