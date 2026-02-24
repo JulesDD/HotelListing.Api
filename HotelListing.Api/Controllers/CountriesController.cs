@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using HotelListing.Api.Application.Models.Country;
 using HotelListing.Api.Application.Contracts;
 using HotelListing.Api.Common.Models.Filtering;
+using Microsoft.AspNetCore.JsonPatch;
+using HotelListing.Api.Common.Constants;
 
 namespace HotelListing.Api.Controllers;
 
@@ -31,10 +33,21 @@ public class CountriesController(ICountriesServices countriesService) : BaseApiC
 
     // PUT: api/Countries/5
     [HttpPut("{id}")]
-    [Authorize(Roles = "Administrator")]
+    [Authorize(Roles = DefaultRoles.Administrator)]
     public async Task<IActionResult> PutCountry(int id, UpdateCountryDto updateDto)
     {
         var result = await countriesService.UpdateCountryAsync(id, updateDto);
+        return ToActionResult(result);
+    }
+
+    // PATCH: api/Countries/5
+    [HttpPatch("{id}")]
+    [Authorize(Roles = DefaultRoles.Administrator)]
+    public async Task<IActionResult> PatchCountry(int id, [FromBody] JsonPatchDocument<UpdateCountryDto> patchDto)
+    {
+        if(patchDto is null) return BadRequest("Patch document cannot be null.");
+
+        var result = await countriesService.PatchCountryAsync(id, patchDto);
         return ToActionResult(result);
     }
 

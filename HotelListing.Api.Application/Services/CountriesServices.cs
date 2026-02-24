@@ -10,6 +10,7 @@ using HotelListing.Api.Common.Models.Paging;
 using HotelListing.Api.Common.Result;
 using HotelListing.Api.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.JsonPatch;
 
 namespace HotelListing.Api.Application.Services;
 
@@ -114,6 +115,39 @@ public class CountriesServices(HotelListingDbContext context, IMapper mapper) : 
         catch
         {
             return Result.Failure(new Error(ErrorCodes.Failure, "An error occurred while updating the country."));
+        }
+    }
+
+    public async Task<Result> PatchCountryAsync(int id, JsonPatchDocument<UpdateCountryDto> patchDto)
+    {
+        try
+        {
+            // Check if the country exists
+            var country = await context.Countries.FindAsync(id);
+            if (country is null)
+            {
+                return Result.NotFound(new Error(ErrorCodes.NotFound, $"Country '{id}' was not found!"));
+            }
+
+            // Map the existing country to an UpdateCountryDto to apply the patch
+            var countryToPatch = mapper.Map<UpdateCountryDto>(country);
+            patchDto.ApplyTo(countryToPatch);
+
+            // Check for duplicate country name after patching
+            var duplicateCountry = await context.Countries.AnyAsync(c => c.CountryId != id && c.Name == countryToPatch.Name);
+            if (duplicateCountry)
+            {
+                return Result.Failure(new Error(ErrorCodes.Failure, $"Country '{countryToPatch.Name}' already exists in database!"));
+            }
+
+            // Map the patched DTO back to the country entity and save changes
+            mapper.Map(countryToPatch, country);
+            await context.SaveChangesAsync();
+            return Result.Success();
+        }
+        catch
+        {
+            return Result.Failure(new Error(ErrorCodes.Failure, "An error occurred while patching the country."));
         }
     }
 

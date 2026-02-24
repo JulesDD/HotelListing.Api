@@ -18,8 +18,9 @@ public class GetCountryHotelsDto
     public PagedResult<GetHotelSlimDto> Hotels { get; set; } = new();
 };
 
-public class GetCountriesDto(
-    int CountryId,
-    string Name,
-    string ShortName
-);
+public class GetCountriesDto
+{
+    public int CountryId { get; set; }
+    public string Name { get; set; }
+    public string ShortName { get; set; }
+};

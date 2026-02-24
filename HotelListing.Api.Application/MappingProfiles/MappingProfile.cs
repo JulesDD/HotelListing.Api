@@ -21,9 +21,15 @@ public class MappingProfileCountry : Profile
 {
     public MappingProfileCountry()
     {
-        CreateMap<Country, GetCountryDto>();
-        CreateMap<Country, GetCountriesDto>();
+        CreateMap<Country, GetCountryDto>()
+            .ForMember(d => d.CountryId, opt => opt.MapFrom(s => s.CountryId));
+        CreateMap<Country, GetCountriesDto>()
+            .ForMember(d => d.CountryId, opt => opt.MapFrom(s => s.CountryId));
         CreateMap<CreateCountryDto, Country>();
+        CreateMap<UpdateCountryDto, Country>()
+            .ForMember(d => d.CountryId, opt => opt.MapFrom(s => s.CountryId))
+            .ReverseMap()
+            .ForMember(d => d.CountryId, opt => opt.MapFrom(s => s.CountryId));
     }
 }
 

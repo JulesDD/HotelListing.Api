@@ -62,7 +62,9 @@ builder.Services.AddAutoMapper(typeof(MappingProfileHotel).Assembly);
 builder.Services.AddAutoMapper(typeof(MappingProfileCountry).Assembly);
 builder.Services.AddAutoMapper(typeof(BookingMappingProfile).Assembly);
 
-builder.Services.AddControllers().AddJsonOptions(opt => opt.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
+builder.Services.AddControllers()
+    .AddNewtonsoftJson()
+    .AddJsonOptions(opt => opt.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
