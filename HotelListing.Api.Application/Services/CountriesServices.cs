@@ -25,6 +25,7 @@ public class CountriesServices(HotelListingDbContext context, IMapper mapper) : 
             query = query.Where(c => EF.Functions.Like(c.Name, $"%{search}%") || EF.Functions.Like(c.ShortName, $"%{search}%"));
         }
         var countries = await query
+           .AsNoTracking()
            .ProjectTo<GetCountriesDto>(mapper.ConfigurationProvider)
            .ToListAsync();
 
@@ -41,6 +42,7 @@ public class CountriesServices(HotelListingDbContext context, IMapper mapper) : 
         }
 
         var countryName = await context.Countries
+            .AsNoTracking()
             .Where(q => q.CountryId == countryId)
             .Select(q => q.Name)
             .SingleAsync();
@@ -78,6 +80,7 @@ public class CountriesServices(HotelListingDbContext context, IMapper mapper) : 
     public async Task<Result<GetCountryDto>> GetCountryAsync(int id)
     {
         var country = await context.Countries
+           .AsNoTracking()
            .Where(c => c.CountryId == id)
            .ProjectTo<GetCountryDto>(mapper.ConfigurationProvider)
            .FirstOrDefaultAsync();
@@ -134,11 +137,10 @@ public class CountriesServices(HotelListingDbContext context, IMapper mapper) : 
             patchDto.ApplyTo(countryToPatch);
 
             // Check for duplicate country name after patching
-            var duplicateCountry = await context.Countries.AnyAsync(c => c.CountryId != id && c.Name == countryToPatch.Name);
+            var normalizedName = countryToPatch.Name?.Trim().ToLower();
+            var duplicateCountry = await context.Countries.AnyAsync(c => c.CountryId != id && c.Name.ToLower().Trim() == normalizedName);
             if (duplicateCountry)
-            {
                 return Result.Failure(new Error(ErrorCodes.Failure, $"Country '{countryToPatch.Name}' already exists in database!"));
-            }
 
             // Map the patched DTO back to the country entity and save changes
             mapper.Map(countryToPatch, country);
@@ -181,14 +183,13 @@ public class CountriesServices(HotelListingDbContext context, IMapper mapper) : 
                 return Result<GetCountryDto>.Failure(new Error(ErrorCodes.Failure, $"'{createDto.Name}' already exists in database!"));
             }
 
+            // Map the CreateCountryDto to a Country entity, add it to the context, and save changes
             var country = mapper.Map<Country>(createDto);
             context.Countries.Add(country);
             await context.SaveChangesAsync();
 
-            var dto = await context.Countries
-                .Where(c => c.CountryId == country.CountryId)
-                .ProjectTo<GetCountryDto>(mapper.ConfigurationProvider)
-                .FirstAsync();
+            // Map the newly created Country entity back to a GetCountryDto to return in the response
+            var dto = mapper.Map<GetCountryDto>(country);
 
             return Result<GetCountryDto>.Success(dto);
 
@@ -207,6 +208,6 @@ public class CountriesServices(HotelListingDbContext context, IMapper mapper) : 
 
     public async Task<bool> CountryExistsAsync(string name)
     {
-        return await context.Countries.AnyAsync(e => e.Name.ToLower().Trim() == name.ToLower().Trim());
+        return await context.Countries.AsNoTracking().AnyAsync(e => e.Name.ToLower().Trim() == name.ToLower().Trim());
     }
 }

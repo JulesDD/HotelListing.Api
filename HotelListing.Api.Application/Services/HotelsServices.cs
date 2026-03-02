@@ -56,13 +56,15 @@ public class HotelsService(HotelListingDbContext context, ICountriesServices cou
         }
         if (!string.IsNullOrWhiteSpace(hotelFilteringParameters.Location))
         {
-            query = query.Where(h => h.Address.Contains(hotelFilteringParameters.Location));
+            var location = hotelFilteringParameters.Location.Trim();
+            query = query.Where(h => EF.Functions.Like(h.Address, $"%{location}%"));
         }
 
         // Perform search after applying other filters to reduce the dataset for the search operation, improving performance.
         if (!string.IsNullOrWhiteSpace(hotelFilteringParameters.Search))
         {
-            query = query.Where(h => h.Name.ToLower().Contains(hotelFilteringParameters.Search) || h.Address.ToLower().Contains(hotelFilteringParameters.Search));
+            var search = hotelFilteringParameters.Search.Trim();
+            query = query.Where(h => EF.Functions.Like(h.Name, $"%{search}%") || EF.Functions.Like(h.Address, $"%{search}%"));
         }
 
         // Apply sorting based on the specified field and direction, allowing for dynamic ordering of results while ensuring that sorting is performed after filtering to maintain relevance.
@@ -99,10 +101,7 @@ public class HotelsService(HotelListingDbContext context, ICountriesServices cou
         context.Hotels.Add(hotel);
         await context.SaveChangesAsync();
 
-        var dto = await context.Hotels
-            .Where(h => h.Id == hotel.Id)
-            .ProjectTo<GetHotelDto>(mapper.ConfigurationProvider)
-            .FirstAsync();
+        var dto = mapper.Map<GetHotelDto>(hotel);
 
         return Result<GetHotelDto>.Success(dto);
     }
@@ -155,7 +154,8 @@ public class HotelsService(HotelListingDbContext context, ICountriesServices cou
 
     public async Task<bool> HotelExistsAsync(string name, int countryId)
     {
+        var normalizedName = name.ToLower().Trim();
         return await context.Hotels
-            .AnyAsync(e => e.Name.ToLower().Trim() == name.ToLower().Trim() && e.CountryId == countryId);
+            .AnyAsync(e => e.Name.ToLower().Trim() == normalizedName && e.CountryId == countryId);
     }
 }
