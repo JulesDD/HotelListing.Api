@@ -7,6 +7,7 @@ using HotelListing.Api.Application.Contracts;
 using HotelListing.Api.Common.Models.Filtering;
 using Microsoft.AspNetCore.JsonPatch;
 using HotelListing.Api.Common.Constants;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace HotelListing.Api.Controllers;
 

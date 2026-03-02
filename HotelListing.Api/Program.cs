@@ -107,6 +107,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+builder.Services.AddMemoryCache();
+
 app.UseSerilogRequestLogging();
 
 app.UseHttpsRedirection();
