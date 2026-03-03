@@ -1,13 +1,10 @@
-﻿using HotelListing.Api.Common.Result;
-using HotelListing.Api.Application.Models;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using HotelListing.Api.Application.Contracts;
 using HotelListing.Api.Application.Models.Country;
-using HotelListing.Api.Application.Contracts;
-using HotelListing.Api.Common.Models.Filtering;
-using Microsoft.AspNetCore.JsonPatch;
 using HotelListing.Api.Common.Constants;
-using Microsoft.Extensions.Caching.Memory;
+using HotelListing.Api.Common.Models.Filtering;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.JsonPatch;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace HotelListing.Api.Controllers;

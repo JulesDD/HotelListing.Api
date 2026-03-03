@@ -15,160 +15,187 @@ using Serilog;
 using System.Text;
 using System.Threading.RateLimiting;
 
-var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("HotelListingDBConnectionString");
-
-
-builder.Services.AddDbContext<HotelListingDbContext>(options => {
-    options.UseSqlServer(connectionString, sqlOptions => {
-        sqlOptions.CommandTimeout(30);
-        sqlOptions.EnableRetryOnFailure(
-            maxRetryCount:3, 
-            maxRetryDelay: TimeSpan.FromSeconds(5), 
-            errorNumbersToAdd: null
-        );
-    });
-    if (builder.Environment.IsDevelopment())
-    {
-        options.EnableSensitiveDataLogging();
-        options.EnableDetailedErrors();
-    }
-});
-
-builder.Services.AddScoped<ICountriesServices, CountriesServices>();     
-builder.Services.AddScoped<IHotelsServices, HotelsService>();
-builder.Services.AddScoped<IUsersService, UsersService>();
-builder.Services.AddScoped<IBookingService, BookingService>();
-builder.Services.AddScoped<IApiKeyValidatorService, ApiKeyValidatorService>();
-
-builder.Services.AddRateLimiter(options=>
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.Hosting.Lifetime", Serilog.Events.LogEventLevel.Information)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", Serilog.Events.LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Day)
+    .CreateBootstrapLogger();
+try 
 {
-    options.AddFixedWindowLimiter(RateLimitingConstants.FixedPolicy, opt =>
-    {
-        opt.PermitLimit = 5;
-        opt.Window = TimeSpan.FromMinutes(1);
-        opt.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
-        opt.QueueLimit = 0;
-    });
+    Log.Information("Starting HotelListing API...");
+    var builder = WebApplication.CreateBuilder(args);
 
-    options.AddPolicy(RateLimitingConstants.FixedPolicy, context =>
-    {
-        var userName = context.User?.Identity?.Name ?? "anonymous";
-        return RateLimitPartition.GetFixedWindowLimiter(userName, _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = 50,
-            Window = TimeSpan.FromMinutes(1),
-            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-            QueueLimit = 3
+    // Add services to the container.
+    var connectionString = builder.Configuration.GetConnectionString("HotelListingDBConnectionString");
+
+
+    builder.Services.AddDbContext<HotelListingDbContext>(options => {
+        options.UseSqlServer(connectionString, sqlOptions => {
+            sqlOptions.CommandTimeout(30);
+            sqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 3,
+                maxRetryDelay: TimeSpan.FromSeconds(5),
+                errorNumbersToAdd: null
+            );
         });
-    });
-
-    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-    {
-        var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        return RateLimitPartition.GetFixedWindowLimiter(ipAddress, _ => new FixedWindowRateLimiterOptions
+        if (builder.Environment.IsDevelopment())
         {
-            PermitLimit = 100,
-            Window = TimeSpan.FromMinutes(1),
-            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-            QueueLimit = 10
-        });
-    });
-
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-
-    options.OnRejected = async (context, cancellationToken) =>
-    {
-        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
-        {
-            context.HttpContext.Response.Headers.RetryAfter = retryAfter.ToString();
+            options.EnableSensitiveDataLogging();
+            options.EnableDetailedErrors();
         }
+    });
 
-        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-        context.HttpContext.Response.ContentType = "application/json";
+    builder.Services.AddScoped<ICountriesServices, CountriesServices>();
+    builder.Services.AddScoped<IHotelsServices, HotelsService>();
+    builder.Services.AddScoped<IUsersService, UsersService>();
+    builder.Services.AddScoped<IBookingService, BookingService>();
+    builder.Services.AddScoped<IApiKeyValidatorService, ApiKeyValidatorService>();
 
-        await context.HttpContext.Response.WriteAsJsonAsync(new
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.AddFixedWindowLimiter(RateLimitingConstants.FixedPolicy, opt =>
         {
-            error = "Too many requests. Please try again later.",
-            message = "Rate limit exceeded. Please wait before making more requests.",
-            retryAfter = retryAfter.TotalSeconds
-        }, cancellationToken: cancellationToken);
-    };
-});
+            opt.PermitLimit = 5;
+            opt.Window = TimeSpan.FromMinutes(1);
+            opt.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
+            opt.QueueLimit = 0;
+        });
 
-builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
-    .AddEntityFrameworkStores<HotelListingDbContext>();
-
-builder.Services.AddHttpContextAccessor();
-builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
-var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>() ?? new JwtSettings();
-if (string.IsNullOrWhiteSpace(jwtSettings.Key))
-{
-    throw new InvalidOperationException("JWT settings are not properly configured.");
-}
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-    .AddJwtBearer(options => {
-        options.TokenValidationParameters = new TokenValidationParameters
+        options.AddPolicy(RateLimitingConstants.PerUserPolicy, context =>
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtSettings.Issuer,
-            ValidAudience = jwtSettings.Audience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
-            ClockSkew = TimeSpan.Zero
+            var userName = context.User?.Identity?.Name ?? "anonymous";
+            return RateLimitPartition.GetFixedWindowLimiter(userName, _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 50,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 3
+            });
+        });
+
+        options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        {
+            var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            return RateLimitPartition.GetFixedWindowLimiter(ipAddress, _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 100,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 10
+            });
+        });
+
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+        options.OnRejected = async (context, cancellationToken) =>
+        {
+            if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+            {
+                context.HttpContext.Response.Headers.RetryAfter = retryAfter.ToString();
+            }
+
+            context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+            context.HttpContext.Response.ContentType = "application/json";
+
+            await context.HttpContext.Response.WriteAsJsonAsync(new
+            {
+                error = "Too many requests. Please try again later.",
+                message = "Rate limit exceeded. Please wait before making more requests.",
+                retryAfter = retryAfter.TotalSeconds
+            }, cancellationToken: cancellationToken);
         };
+    });
+
+    builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
+        .AddEntityFrameworkStores<HotelListingDbContext>();
+
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+    var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>() ?? new JwtSettings();
+    if (string.IsNullOrWhiteSpace(jwtSettings.Key))
+    {
+        Log.Fatal("JWT settings are not properly configured. Please check the configuration.");
+        throw new InvalidOperationException("JWT settings are not properly configured.");
+    }
+    builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
     })
-    .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>(DefaultAuthentication.BasicScheme, _ => {})
-    .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(DefaultAuthentication.ApiKeyScheme, _ => {});
-builder.Services.AddAuthorization();
+        .AddJwtBearer(options => {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtSettings.Issuer,
+                ValidAudience = jwtSettings.Audience,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                ClockSkew = TimeSpan.Zero
+            };
+        })
+        .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>(DefaultAuthentication.BasicScheme, _ => { })
+        .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(DefaultAuthentication.ApiKeyScheme, _ => { });
+    builder.Services.AddAuthorization();
 
-builder.Services.AddAutoMapper(typeof(MappingProfileHotel).Assembly);
-builder.Services.AddAutoMapper(typeof(MappingProfileCountry).Assembly);
-builder.Services.AddAutoMapper(typeof(BookingMappingProfile).Assembly);
+    builder.Services.AddAutoMapper(typeof(MappingProfileHotel).Assembly);
+    builder.Services.AddAutoMapper(typeof(MappingProfileCountry).Assembly);
+    builder.Services.AddAutoMapper(typeof(BookingMappingProfile).Assembly);
 
-builder.Services.AddControllers()
-    .AddNewtonsoftJson()
-    .AddJsonOptions(opt => opt.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+    builder.Services.AddControllers()
+        .AddNewtonsoftJson()
+        .AddJsonOptions(opt => opt.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
+    // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+    builder.Services.AddOpenApi();
 
-builder.Services.AddCors(options =>
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("AllowAll", b => b.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod());
+    });
+
+    builder.Host.UseSerilog((ctx, lc) => lc.WriteTo.Console().ReadFrom.Configuration(ctx.Configuration));
+    builder.Services.AddAutoMapper(typeof(MapperConfig));
+
+    var app = builder.Build();
+
+    app.MapGroup("api/defaultauth").MapIdentityApi<ApplicationUser>();
+
+    // Configure the HTTP request pipeline.
+    if (app.Environment.IsDevelopment())
+    {
+        app.MapOpenApi();
+    }
+
+    builder.Services.AddMemoryCache();
+
+    app.UseSerilogRequestLogging();
+
+
+    app.UseHttpsRedirection();
+    app.UseRateLimiter();
+    app.UseCors("AllowAll");
+    app.UseAuthorization();
+
+    app.MapControllers();
+    Log.Information("HotelListing API is running...");
+
+    app.Run();
+}
+catch (Exception ex)
 {
-    options.AddPolicy("AllowAll", b=> b.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod());
-});
-
-builder.Host.UseSerilog((ctx, lc) => lc.WriteTo.Console().ReadFrom.Configuration(ctx.Configuration));
-builder.Services.AddAutoMapper(typeof(MapperConfig));
-
-var app = builder.Build();
-
-app.MapGroup("api/defaultauth").MapIdentityApi<ApplicationUser>();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+    Log.Fatal(ex, "Host terminated unexpectedly");
+    throw;
+}
+finally
 {
-    app.MapOpenApi();
+    Log.CloseAndFlush();
 }
 
-builder.Services.AddMemoryCache();
 
-app.UseSerilogRequestLogging();
-
-
-app.UseHttpsRedirection();
-app.UseRateLimiter();
-app.UseCors("AllowAll");
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.Run();

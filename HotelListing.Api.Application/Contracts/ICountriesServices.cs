@@ -1,7 +1,7 @@
-﻿using HotelListing.Api.Common.Result;
-using HotelListing.Api.Application.Models.Country;
+﻿using HotelListing.Api.Application.Models.Country;
 using HotelListing.Api.Common.Models.Filtering;
 using HotelListing.Api.Common.Models.Paging;
+using HotelListing.Api.Common.Result;
 using Microsoft.AspNetCore.JsonPatch;
 
 namespace HotelListing.Api.Application.Contracts;
