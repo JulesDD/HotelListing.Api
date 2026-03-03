@@ -45,13 +45,38 @@ builder.Services.AddScoped<IApiKeyValidatorService, ApiKeyValidatorService>();
 
 builder.Services.AddRateLimiter(options=>
 {
-    options.AddFixedWindowLimiter("Fixed", limiterOptions =>
+    options.AddFixedWindowLimiter(RateLimitingConstants.FixedPolicy, opt =>
     {
-        limiterOptions.PermitLimit = 5;
-        limiterOptions.Window = TimeSpan.FromMinutes(1);
-        limiterOptions.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
-        limiterOptions.QueueLimit = 0;
+        opt.PermitLimit = 5;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
     });
+
+    options.AddPolicy(RateLimitingConstants.FixedPolicy, context =>
+    {
+        var userName = context.User?.Identity?.Name ?? "anonymous";
+        return RateLimitPartition.GetFixedWindowLimiter(userName, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 50,
+            Window = TimeSpan.FromMinutes(1),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 3
+        });
+    });
+
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    {
+        var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(ipAddress, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 100,
+            Window = TimeSpan.FromMinutes(1),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 10
+        });
+    });
+
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
     options.OnRejected = async (context, cancellationToken) =>
