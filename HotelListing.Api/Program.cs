@@ -6,6 +6,7 @@ using HotelListing.Api.Common.Models.Config;
 using HotelListing.Api.Configurations;
 using HotelListing.Api.Domain;
 using HotelListing.Api.Handlers;
+using HotelListing.Api.Middleware;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -29,6 +30,11 @@ try
 {
     Log.Information("Starting HotelListing API...");
     var builder = WebApplication.CreateBuilder(args);
+
+    builder.Host.UseSerilog((context, service, configuration) => configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(service)
+        );
 
     // Add services to the container.
     var connectionString = builder.Configuration.GetConnectionString("HotelListingDBConnectionString");
@@ -55,6 +61,9 @@ try
     builder.Services.AddScoped<IUsersService, UsersService>();
     builder.Services.AddScoped<IBookingService, BookingService>();
     builder.Services.AddScoped<IApiKeyValidatorService, ApiKeyValidatorService>();
+
+    builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+    builder.Services.AddProblemDetails();
 
     builder.Services.AddRateLimiter(options =>
     {
@@ -160,10 +169,11 @@ try
         options.AddPolicy("AllowAll", b => b.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod());
     });
 
-    builder.Host.UseSerilog((ctx, lc) => lc.WriteTo.Console().ReadFrom.Configuration(ctx.Configuration));
     builder.Services.AddAutoMapper(typeof(MapperConfig));
 
     var app = builder.Build();
+
+    app.UseExceptionHandler("/error");
 
     app.MapGroup("api/defaultauth").MapIdentityApi<ApplicationUser>();
 
@@ -175,15 +185,44 @@ try
 
     builder.Services.AddMemoryCache();
 
-    app.UseSerilogRequestLogging();
+    app.UseSerilogRequestLogging(options =>
+    {
+        options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+
+        options.GetLevel = (httpContext, elapsed, ex) =>
+        {
+            if (ex != null || httpContext.Response.StatusCode >= 500)
+                return Serilog.Events.LogEventLevel.Error;
+            if (httpContext.Response.StatusCode >= 400)
+                return Serilog.Events.LogEventLevel.Warning;
+            return Serilog.Events.LogEventLevel.Information;
+        };
+
+        options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+        {
+            diagnosticContext.Set("RemoteIP", httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+            diagnosticContext.Set("UserName", httpContext.User.Identity?.Name ?? "anonymous");
+            if(httpContext.User?.Identity?.IsAuthenticated == true)
+            {
+                var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "unknown";
+                diagnosticContext.Set("UserId", userId);
+            }
+        };
+    });
 
 
     app.UseHttpsRedirection();
+
     app.UseRateLimiter();
-    app.UseCors("AllowAll");
+    
     app.UseAuthorization();
+    
+    app.UseOutputCache();
 
     app.MapControllers();
+
+    app.UseCors("AllowAll");
+   
     Log.Information("HotelListing API is running...");
 
     app.Run();

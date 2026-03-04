@@ -6,6 +6,7 @@ using HotelListing.Api.Common.Result;
 using HotelListing.Api.Domain;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -15,7 +16,7 @@ using System.Text;
 namespace HotelListing.Api.Application.Services;
 
 public class UsersService(UserManager<ApplicationUser> userManager, HotelListingDbContext hotelListingDbContext, 
-    IOptions<JwtSettings> jwtOptions, IHttpContextAccessor httpContextAccessor) : IUsersService
+    IOptions<JwtSettings> jwtOptions, IHttpContextAccessor httpContextAccessor, ILogger<UsersService> logger) : IUsersService
 {
     public async Task<Result<RegisteredUserDto>> RegisterAsync(RegisterUserDto registerUserDto)
     {
@@ -32,7 +33,9 @@ public class UsersService(UserManager<ApplicationUser> userManager, HotelListing
         var result = await userManager.CreateAsync(user, registerUserDto.Password);
         if (!result.Succeeded)
         {
+
             var errors = result.Errors.Select(e => new Error(ErrorCodes.BadRequest, e.Description)).ToArray();
+            logger.LogError("User registration failed for email {Email}: {Errors}", registerUserDto.Email, string.Join(", ", errors));
             return Result<RegisteredUserDto>.BadRequest(errors);
         }
 
@@ -58,12 +61,14 @@ public class UsersService(UserManager<ApplicationUser> userManager, HotelListing
         var user = await userManager.FindByEmailAsync(loginUserDto.Email);
         if (user is null)
         {
+            logger.LogWarning("Login attempt failed for email: {Email}. User not found.", loginUserDto.Email);
             return Result<string>.Failure(new Error(ErrorCodes.BadRequest, "Email not found!"));
         }
         // Check if the password is correct
         var isPasswordValid = await userManager.CheckPasswordAsync(user, loginUserDto.Password);
         if (!isPasswordValid)
         {
+            logger.LogWarning("Login attempt failed for email: {Email}. Invalid password.", loginUserDto.Email);
             return Result<string>.Failure(new Error(ErrorCodes.BadRequest, "Invalid password!"));
         }
 
