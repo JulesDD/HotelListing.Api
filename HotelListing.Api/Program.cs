@@ -1,3 +1,4 @@
+using HealthChecks.UI.Client;
 using HotelListing.Api.Application.Contracts;
 using HotelListing.Api.Application.MappingProfiles;
 using HotelListing.Api.Application.Services;
@@ -9,8 +10,11 @@ using HotelListing.Api.Handlers;
 using HotelListing.Api.Middleware;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks.
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using System.Text;
@@ -171,6 +175,21 @@ try
 
     builder.Services.AddAutoMapper(typeof(MapperConfig));
 
+    builder.Services.AddHealthChecks()
+        .AddCheck("Self", () => HealthCheckResult.Healthy("The API is healthy!"), tags: ["api"])
+        .AddDbContextCheck<HotelListingDbContext>(
+        name: "Database",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: ["db", "sql"]);
+    
+    builder.Services.AddHealthChecksUI(setup =>
+    {
+        setup.SetEvaluationTimeInSeconds(10);
+        setup.MaximumHistoryEntriesPerEndpoint(50);
+        setup.AddHealthCheckEndpoint("HotelListing API", "/healthz");
+    })
+    .AddInMemoryStorage();
+
     var app = builder.Build();
 
     app.UseExceptionHandler("/error");
@@ -212,6 +231,48 @@ try
 
 
     app.UseHttpsRedirection();
+
+    app.MapHealthChecks("/healthz", new HealthCheckOptions
+    {
+        ResponseWriter = async (context, report) =>
+        {
+            context.Response.ContentType = "application/json";
+
+            var result = new
+            {
+                status = report.Status.ToString(),
+                checks = report.Entries.Select(e => new
+                {
+                    name = e.Key,
+                    status = e.Value.Status.ToString(),
+                    exception = e.Value.Exception?.Message,
+                    duration = e.Value.Duration.ToString()
+                })
+            };
+            await context.Response.WriteAsJsonAsync(result);
+        }
+    });
+
+    app.MapHealthChecks("/healthz/live", new HealthCheckOptions
+    {
+        Predicate = _ => false
+    });
+
+    app.MapHealthChecks("/healthz/ready", new HealthCheckOptions
+    {
+        Predicate = report => report.Tags.Contains("db")
+    });
+
+    app.MapHealthChecks("/healthz_ui", new HealthCheckOptions
+    {
+        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+    });
+    
+    app.MapHealthChecksUI(options =>
+    {
+        options.UIPath = "/healthchecks-ui";
+        options.ApiPath = "/healthchecks-api";
+    });
 
     app.UseRateLimiter();
     
