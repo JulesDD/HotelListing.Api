@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using HealthChecks.UI.Client;
 using HotelListing.Api.Application.Contracts;
 using HotelListing.Api.Application.MappingProfiles;
@@ -14,9 +15,11 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Diagnostics.HealthChecks.
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Serilog;
+using Swashbuckle.AspNetCore.Filters;
+using System.Reflection;
 using System.Text;
 using System.Threading.RateLimiting;
 
@@ -190,6 +193,136 @@ try
     })
     .AddInMemoryStorage();
 
+    builder.Services.AddApiVersioning(options =>
+    {
+        options.AssumeDefaultVersionWhenUnspecified = true;
+        options.DefaultApiVersion = new ApiVersion(1, 0);
+        options.ReportApiVersions = true;
+        options.ApiVersionReader = new UrlSegmentApiVersionReader();
+    })
+    .AddApiExplorer(options =>
+    {
+        options.GroupNameFormat = "'v'VVV";
+        options.SubstituteApiVersionInUrl = true;
+    });
+
+    builder.Services.AddEndpointsApiExplorer();
+
+    builder.Services.AddSwaggerGen(opt =>
+    {
+        // API Information
+        opt.SwaggerDoc("v1", new OpenApiInfo
+        {
+            Version = "v1",
+            Title = "Hotel Listing API",
+            Description = "An ASP.NET Core Web API for managing hotels and countries.",
+            Contact = new OpenApiContact
+            {
+                Name = "Jules Douglas",
+                Email = "jules.douglas@hotmail.com"
+            },
+            License = new OpenApiLicense
+            {
+                Name = "MIT License",
+                Url = new Uri("https://opensource.org/licenses/MIT")
+            }
+        });
+
+        // Include XML comments if available
+        var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+        var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+        if (File.Exists(xmlPath))
+        {
+            opt.IncludeXmlComments(xmlPath);
+        }
+
+        // Enable annotions for API versioning
+        opt.EnableAnnotations();
+
+
+        // Add JWT Authentication to Swagger
+        opt.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            Description = "JWT Authorization header using the Bearer scheme. Example: ",
+            Name = "Authorization",
+            In = ParameterLocation.Header,
+            Type = SecuritySchemeType.ApiKey,
+            Scheme = "Bearer",
+            BearerFormat = "JWT"
+        });
+
+        // Add API Key Authentication to Swagger
+        opt.AddSecurityDefinition(DefaultAuthentication.ApiKeyScheme, new OpenApiSecurityScheme
+        {
+            Description = "API Key Authentication.",
+            Name = "X-API-KEY",
+            In = ParameterLocation.Header,
+            Type = SecuritySchemeType.ApiKey,
+            Scheme = DefaultAuthentication.ApiKeyScheme
+        });
+
+        // Add Basic Authentication to Swagger
+        opt.AddSecurityDefinition(DefaultAuthentication.BasicScheme, new OpenApiSecurityScheme
+        {
+            Description = "Basic Authentication.",
+            Name = "Authorization",
+            In = ParameterLocation.Header,
+            Type = SecuritySchemeType.Http,
+            Scheme = DefaultAuthentication.BasicScheme,
+            BearerFormat = "JWT"
+        });
+
+        // Add security requirements for all three authentication schemes
+        opt.AddSecurityRequirement(new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "Bearer"
+                    }
+                },
+                new string[]{ }
+            },
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = DefaultAuthentication.ApiKeyScheme
+                    }
+                },
+                new string[]{ }
+            },
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = DefaultAuthentication.BasicScheme
+                    }
+                },
+                new string[]{ }
+            }
+        });
+
+        // Add filters to include examples and apply security requirements
+        opt.ExampleFilters();
+
+        // Apply the security requirements to all operations
+        opt.OperationFilter<SecurityRequirementsOperationFilter>();
+
+        // Order actions by method and then by path
+        opt.OrderActionsBy((apiDesc) => $"{apiDesc.HttpMethod}_{apiDesc.RelativePath}");
+
+    });
+
+    builder.Services.AddSwaggerExamplesFromAssemblyOf<Program>();
+
     var app = builder.Build();
 
     app.UseExceptionHandler("/error");
@@ -199,7 +332,19 @@ try
     // Configure the HTTP request pipeline.
     if (app.Environment.IsDevelopment())
     {
+        app.UseSwagger();
         app.MapOpenApi();
+        app.UseSwaggerUI(opt =>
+        {
+            opt.SwaggerEndpoint("/swagger/v1/swagger.json", "Hotel Listing API v1");
+            opt.RoutePrefix = "swagger"; // Set Swagger UI at the app's root
+            opt.DocumentTitle = "Hotel Listing API Documentation";
+            opt.DisplayRequestDuration();
+            opt.EnableDeepLinking();
+            opt.EnableFilter();
+            opt.ShowExtensions();
+            opt.EnableValidator();
+        });
     }
 
     builder.Services.AddMemoryCache();

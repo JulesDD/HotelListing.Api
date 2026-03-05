@@ -1,4 +1,5 @@
-﻿using HotelListing.Api.Common.Constants;
+﻿using Asp.Versioning;
+using HotelListing.Api.Common.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -6,7 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HotelListing.Api.Controllers;
 
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
+[ApiVersion("1.0")]
 [ApiController]
 [Authorize(AuthenticationSchemes = DefaultAuthentication.ApiKeyScheme)]
 public class ApiKeyController : ControllerBase

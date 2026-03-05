@@ -1,16 +1,14 @@
-﻿using HotelListing.Api.Domain;
-using HotelListing.Api.Common.Result;
-using HotelListing.Api.Common.Constants;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
+﻿using Asp.Versioning;
 using HotelListing.Api.Application.Contracts;
 using HotelListing.Api.Application.Models.Auth;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 //Created a controller for authentication
 namespace HotelListing.Api.Controllers;
 
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
+[ApiVersion("1.0")]
 [ApiController]
 [AllowAnonymous]
 public class AuthController(IUsersService usersService) : BaseApiController

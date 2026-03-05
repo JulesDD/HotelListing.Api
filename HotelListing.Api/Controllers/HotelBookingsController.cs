@@ -1,15 +1,16 @@
-﻿using HotelListing.Api.AuthorizationFilters;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using HotelListing.Api.Application.Models.Booking;
+﻿using Asp.Versioning;
 using HotelListing.Api.Application.Contracts;
-using HotelListing.Api.Common.Models.Paging;
+using HotelListing.Api.Application.Models.Booking;
+using HotelListing.Api.AuthorizationFilters;
 using HotelListing.Api.Common.Models.Filtering;
+using HotelListing.Api.Common.Models.Paging;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace HotelListing.Api.Controllers;
 
-[Route("api/hotels/{hotelId:int}/bookings")]
+[Route("api/hotels/v{version:apiVersion}/{hotelId:int}/bookings")]
+[ApiVersion("1.0")]
 [ApiController]
 [Authorize]
 public class HotelBookingsController(IBookingService bookingService) : BaseApiController

@@ -1,4 +1,5 @@
-﻿using HotelListing.Api.Application.Contracts;
+﻿using Asp.Versioning;
+using HotelListing.Api.Application.Contracts;
 using HotelListing.Api.Application.Models.Hotel;
 using HotelListing.Api.Common.Models.Filtering;
 using HotelListing.Api.Common.Models.Paging;
@@ -7,7 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HotelListing.Api.Controllers;
 
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
+[ApiVersion("1.0")]
 [ApiController]
 [Authorize]
 public class HotelsController(IHotelsServices hotelsService) : BaseApiController
