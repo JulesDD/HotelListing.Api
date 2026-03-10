@@ -321,6 +321,10 @@ try
 
     });
 
+    builder.Services.AddMemoryCache();
+
+    builder.Services.AddOutputCache();
+
     builder.Services.AddSwaggerExamplesFromAssemblyOf<Program>();
 
     var app = builder.Build();
@@ -347,7 +351,7 @@ try
         });
     }
 
-    builder.Services.AddMemoryCache();
+   
 
     app.UseSerilogRequestLogging(options =>
     {
