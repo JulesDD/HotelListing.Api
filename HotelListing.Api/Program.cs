@@ -314,7 +314,7 @@ try
         opt.ExampleFilters();
 
         // Apply the security requirements to all operations
-        opt.OperationFilter<SecurityRequirementsOperationFilter>();
+        opt.OperationFilter<HotelListing.Api.Filters.SecurityRequirementsOperationFilters>();
 
         // Order actions by method and then by path
         opt.OrderActionsBy((apiDesc) => $"{apiDesc.HttpMethod}_{apiDesc.RelativePath}");
